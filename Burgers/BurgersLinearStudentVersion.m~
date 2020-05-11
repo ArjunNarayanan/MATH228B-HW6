@@ -7,7 +7,7 @@ global N J nx K M lmln
 global vmapM vmapP vmapI vmapO
 
 
-N =50; %Number of elements
+N =4; %Number of elements
 xL=-1; xR=1;
 X = linspace(xL, xR, N+1);
 FinalTime =0.5;
@@ -68,57 +68,51 @@ CFL=0.2; umax = max(max(abs(u)));
 dt = CFL* min(xmin/umax);
 Nsteps = ceil(FinalTime/dt); dt = FinalTime/Nsteps; 
 
+rhs = BurgersRHS(u);
 
-
-for tstep=1:Nsteps
-    rhs = BurgersRHS(u); 
-    u = u+dt*rhs; %Forward Euler to update u^{n+1} from u^n
-    time = time+dt;
-    %if (mod(tstep,10))==1 %Plotting every 10th time step
-       plot(x,u,'b-');%hold off;
-       axis([-1 1 -1.5 1.5]);
-       title('Solution at different times');
-       xlabel('x axis');
-       ylabel('u axis');
-    %pause
-    %end
-end
+% for tstep=1:Nsteps
+%     rhs = BurgersRHS(u); 
+%     u = u+dt*rhs; %Forward Euler to update u^{n+1} from u^n
+%     time = time+dt;
+%     %if (mod(tstep,10))==1 %Plotting every 10th time step
+%        plot(x,u,'b-');%hold off;
+%        axis([-1 1 -1.5 1.5]);
+%        title('Solution at different times');
+%        xlabel('x axis');
+%        ylabel('u axis');
+%     %pause
+%     %end
+% end
 
 function val = BurgersFlux(u)
     val = 0.5*u^2;
 end
 
-function val = LaxFriedrichsFlux(uL,uR)
-    C = max(abs(uL),abs(uR));
+function val = LaxFriedrichsFlux(uL,uR,C)
     val = 0.5*(BurgersFlux(uL)+BurgersFlux(uR)) + 0.5*C*(uL-uR);
-end
-
-function rhs = FluxRHS(u)
-global N
-%     MaxVel = max(max(abs(u)));% Wave speed=constant C in Lax-Friedrichs flux
-    
-     rhs = zeros(2,N);
-     rhs(1,1) = +LaxFriedrichsFlux(u(1,1),u(1,1));
-     rhs(2,1) = -LaxFriedrichsFlux(u(2,1),u(1,2));
-     
-     for el = 2:N-1
-        rhs(1,el) = +LaxFriedrichsFlux(u(2,el-1),u(1,el));
-        rhs(2,el) = -LaxFriedrichsFlux(u(2,el),u(1,el+1));
-     end
-    
-     rhs(1,N) = +LaxFriedrichsFlux(u(2,N-1),u(1,N));
-     rhs(2,N) = -LaxFriedrichsFlux(u(2,N),u(2,N));
 end
 
 function [rhs] = BurgersRHS(u)
 global N nx K M lmln 
 global vmapM vmapP vmapI vmapO
 
-f = arrayfun(@BurgersFlux,u);
-Fl = FluxRHS(u);
-
-rhs = M\(K'*f + Fl);
-
+ du = zeros(2,N); du(:) = u(vmapM)-u(vmapP);
+ MaxVel = max(max(abs(u)));% Wave speed=constant C in Lax-Friedrichs flux
+ 
+ 
+     %Right hand-side of the weak form
+     % TODO: IMPLEMENT THE LAX-FRIEDRICHS FLUX
+     rhs = zeros(2,N);
+     rhs(1,1) = -LaxFriedrichsFlux(u(1,1),u(1,1),MaxVel);
+     rhs(2,1) = LaxFriedrichsFlux(u(2,1),u(1,2),MaxVel);
+     
+     for el = 2:N-1
+        rhs(1,el) = -LaxFriedrichsFlux(u(2,el-1),u(1,el),MaxVel);
+        rhs(2,el) = +LaxFriedrichsFlux(u(2,el),u(1,el+1),MaxVel);
+     end
+    
+     rhs(1,N) = -LaxFriedrichsFlux(u(2,
+     
 end
 
 
